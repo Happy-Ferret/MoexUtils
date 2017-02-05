@@ -24,7 +24,7 @@ import (
 
 // Marketdata description
 type Marketdata struct {
-	MarketData struct {
+	Space struct {
 		Columns []string   `json:"columns"`
 		Data    [][]string `json:"data"`
 	} `json:"marketdata"`
@@ -32,13 +32,69 @@ type Marketdata struct {
 
 // TradesPage description
 type TradesPage struct {
-	Trades struct {
+	Space struct {
 		Columns []string   `json:"columns"`
 		Data    [][]string `json:"data"`
 	} `json:"trades"`
 }
 
+func (c *Marketdata) delta() string {
+	return c.Space.Data[0][0]
+}
+
+func (c *TradesPage) delta() string {
+	return c.Space.Data[0][0]
+}
+
+type ddddd interface {
+	delta() string
+}
+
 var url string
+var configuration config.Config
+
+func check(parturl1, parturl2, checkUnit string, urls map[string]string) {
+	if checkUnit == "marketdata" {
+		var output Marketdata
+		for x, y := range urls {
+			url := "http://iss.moex.com/iss/engines/" + y + parturl1 + x + parturl2
+			contents := moexlib.GetAllContents(url)
+			json.Unmarshal(contents, &output)
+			diff := moexlib.GetDelta(output.delta())
+			delta := fmt.Sprintf("%v", diff)
+			// fmt.Println(delta, output.MarketData.Data[0][0])
+			err := moexlib.Send2Graphite(delta, "iss."+checkUnit+"."+y+"."+x, configuration.Server.IP, configuration.Server.Port)
+			if err != false {
+				log.Fatal(err)
+			}
+		}
+	} else {
+		var output TradesPage
+		for x, y := range urls {
+			url := "http://iss.moex.com/iss/engines/" + y + "/markets/" + x + "/trades.json?reversed=1&limit=1&iss.only=trades&trades.columns=TRADETIME"
+
+			contents := moexlib.GetAllContents(url)
+			json.Unmarshal(contents, &output)
+			diff := moexlib.GetDelta(output.delta())
+			delta := fmt.Sprintf("%v", diff)
+			// fmt.Println(delta, output.Trades.Data[0][0])
+			err := moexlib.Send2Graphite(delta, "iss.trades."+y+"."+x, "127.0.0.1", 2003)
+			if err != false {
+				log.Fatal(err)
+			}
+		}
+	}
+
+}
+
+func getState(urls map[string]string, checkUnit string) {
+	if checkUnit == "marketdata" {
+		parturl1 := "/markets/"
+		parturl2 := "/securities.json?iss.only=marketdata&sort_column=UPDATETIME&sort_order=desc&first=1&marketdata.columns=UPDATETIME"
+		check(parturl1, parturl2, checkUnit, urls)
+	}
+
+}
 
 func main() {
 	urls := map[string]string{
@@ -47,41 +103,9 @@ func main() {
 		"forts":  "futures",
 		"index":  "stock",
 	}
-	var configuration config.Config
+
 	configuration = config.ReadConfig("config.json")
+	getState(urls, "trades")
+	getState(urls, "marketdata")
 
-	for x, y := range urls {
-		url := "http://moex.com/iss/engines/" + y + "/markets/" + x + "/securities.json?iss.only=marketdata&sort_column=updatetime&sort_order=desc&first=1&marketdata.columns=UPDATETIME"
-
-		var output Marketdata
-
-		contents := moexlib.GetAllContents(url)
-		json.Unmarshal(contents, &output)
-		// fmt.Println(output.MarketData.Columns[0])
-		// fmt.Println(output.MarketData.Data[0][0])
-		diff := moexlib.GetDelta(output.MarketData.Data[0][0])
-		delta := fmt.Sprintf("%v", diff)
-		fmt.Println(delta, output.MarketData.Data[0][0])
-		ok := moexlib.Send2Graphite(delta, "iss.marketdata."+y+"."+x, configuration.Server.IP, configuration.Server.Port)
-		if ok == false {
-			fmt.Println("good")
-		}
-	}
-	for x, y := range urls {
-		url := "http://moex.com/iss/engines/" + y + "/markets/" + x + "/trades.json?reversed=1&limit=1&iss.only=trades&trades.columns=TRADETIME"
-
-		var output TradesPage
-
-		contents := moexlib.GetAllContents(url)
-		json.Unmarshal(contents, &output)
-		// fmt.Println(output.MarketData.Columns[0])
-		// fmt.Println(output.MarketData.Data[0][0])
-		diff := moexlib.GetDelta(output.Trades.Data[0][0])
-		delta := fmt.Sprintf("%v", diff)
-		// fmt.Println(delta, output.Trades.Data[0][0])
-		err := moexlib.Send2Graphite(delta, "iss.trades."+y+"."+x, "172.22.192.91", 2003)
-		if err != false {
-			log.Fatal(err)
-		}
-	}
 }
