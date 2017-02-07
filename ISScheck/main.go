@@ -64,7 +64,7 @@ func main() {
 		}
 	}
 	for x, y := range urls {
-		url := "http://moex.com/iss/engines/" + x + "/markets/" + y + "/trades/?reversed=1&limit=1&iss.only=trades&trades.columns=TRADETIME"
+		url := "http://moex.com/iss/engines/" + x + "/markets/" + y + "/trades.json?reversed=1&limit=1&iss.only=trades&trades.columns=TRADETIME"
 
 		var output TradesPage
 
@@ -75,9 +75,9 @@ func main() {
 		diff := moexlib.GetDelta(output.Trades.Data[0][0])
 		delta := fmt.Sprintf("%v", diff)
 		fmt.Println(delta, output.Trades.Data[0][0])
-		// ok := moexlib.Send2Graphite(delta, "iss.trades."+x+"."+y, "127.0.0.1", 32768)
-		// if ok == false {
-		// 	fmt.Println("good")
-		// }
+		ok := moexlib.Send2Graphite(delta, "iss.trades."+x+"."+y, "127.0.0.1", 32768)
+		if ok == false {
+			fmt.Println("good")
+		}
 	}
 }
