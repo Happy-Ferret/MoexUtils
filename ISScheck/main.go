@@ -87,6 +87,7 @@ func main() {
 			url := urlReturn(engine, market, typeOfCheck)
 			diff := moexlib.GetDelta(getURL(url))
 			delta := fmt.Sprintf("%v", diff)
+			// fmt.Println(engine+"--"+market, delta)
 			ok := moexlib.Send2Graphite(delta, "iss.trades."+engine+"."+market, configuration.Server.IP, configuration.Server.Port)
 			if ok == false {
 				log.Fatal(ok)
