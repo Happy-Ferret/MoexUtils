@@ -36,20 +36,35 @@ type Request struct {
 	} `json:"trades"`
 }
 
+//
+func randNum() string {
+	return "4"
+}
+
 func urlReturn(engine, market, typeOfCheck string) string {
 	// engine - stock, futures, currency, stock
 	// market - index, forts, selt, shares
 	if typeOfCheck == "marketdata" {
+		if market == "index" {
+			//
+			// Add "&securities=MICEXINDEXCF,RTSI,MICEXBMI,RTSSTD,RVI" if makret == index
+			//
+			parturl := "/securities.json?iss.only=marketdata&sort_column=UPDATETIME&sort_order=desc&first=1&marketdata.columns=UPDATETIME&securities=MICEXINDEXCF,RTSI,MICEXBMI,RTSSTD,RVI"
+			url := "http://iss.moex.com/iss/engines/" + engine + "/markets/" + market + parturl
+			return url
+		}
 		parturl := "/securities.json?iss.only=marketdata&sort_column=UPDATETIME&sort_order=desc&first=1&marketdata.columns=UPDATETIME"
-		url := "http://iss.moex.com/iss/engines/" + market + "/markets/" + engine + parturl
+		url := "http://iss.moex.com/iss/engines/" + engine + "/markets/" + market + parturl
 		return url
+
 	} else if typeOfCheck == "trades" {
 		parturl := "/trades.json?reversed=1&limit=1&iss.only=trades&trades.columns=TRADETIME"
-		url := "http://iss.moex.com/iss/engines/" + market + "/markets/" + engine + parturl
+		url := "http://iss.moex.com/iss/engines/" + engine + "/markets/" + market + parturl
 		return url
+
 	} else {
-		log.Fatal("bad")
-		return "bad"
+		log.Fatal("unknown type of check")
+		return "unknown type of check"
 	}
 }
 
@@ -63,11 +78,9 @@ func getURL(url string) string {
 	if input.Marketdata.Columns == nil {
 		json.Unmarshal(moexlib.GetAllContents(url), &input)
 		output = input.Trade.Data[0][0]
-		// fmt.Println(output)
 		return output
 	}
 	output = input.Marketdata.Data[0][0]
-	// fmt.Println(output)
 	return output
 
 }
@@ -81,14 +94,14 @@ func main() {
 	}
 
 	configuration = config.ReadConfig("config.json")
-	checks := [2]string{"marketdata", "trades"}
+	checks := []string{"marketdata", "trades"}
 	for _, typeOfCheck := range checks {
-		for engine, market := range urls {
+		for market, engine := range urls {
 			url := urlReturn(engine, market, typeOfCheck)
 			diff := moexlib.GetDelta(getURL(url))
 			delta := fmt.Sprintf("%v", diff)
 			// fmt.Println(engine+"--"+market, delta)
-			ok := moexlib.Send2Graphite(delta, "iss.trades."+engine+"."+market, configuration.Server.IP, configuration.Server.Port)
+			ok := moexlib.Send2Graphite(delta, "iss."+typeOfCheck+"."+engine+"."+market, configuration.Server.IP, configuration.Server.Port)
 			if ok == false {
 				log.Fatal(ok)
 			}
