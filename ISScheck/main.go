@@ -94,8 +94,8 @@ func main() {
 	configuration = config.ReadConfig("config.json")
 	checks := []string{"marketdata", "trades"}
 	for _, typeOfCheck := range checks {
-		for _, market_info := range engines {
-			engine, market := market_info[0], market_info[1]
+		for _, marketInfo := range engines {
+			engine, market := marketInfo[0], marketInfo[1]
 			url := urlReturn(engine, market, typeOfCheck)
 			diff := moexlib.GetDelta(getURL(url))
 			delta := fmt.Sprintf("%v", diff)
