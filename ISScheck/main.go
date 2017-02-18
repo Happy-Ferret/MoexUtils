@@ -8,6 +8,7 @@ import (
 
 	moexlib "github.com/agareev/MoexLib/monitoring"
 	config "github.com/agareev/MoexLib/other"
+	"github.com/jasonlvhit/gocron"
 )
 
 /*
@@ -23,7 +24,10 @@ import (
 }}
 */
 
-var configuration config.Config
+var (
+	configuration config.Config
+	issURL        = "http://iss.moex.com/iss"
+)
 
 // Request JSON description
 type Request struct {
@@ -64,7 +68,7 @@ func urlReturn(engine, market, typeOfCheck string) string {
 		log.Fatal("unknown type of check")
 		return "unknown type of check"
 	}
-	return "http://iss.moex.com/iss/engines/" + engine + "/markets/" + market + parturl + randNum()
+	return issURL + "/engines/" + engine + "/markets/" + market + parturl + randNum()
 }
 
 // TODO split on 2 functions
@@ -83,7 +87,7 @@ func getURL(url string) string {
 	return output
 }
 
-func main() {
+func execute() {
 	engines := [][2]string{
 		{"stock", "shares"},
 		{"currency", "selt"},
@@ -91,7 +95,6 @@ func main() {
 		{"stock", "index"},
 	}
 
-	configuration = config.ReadConfig("config.json")
 	checks := []string{"marketdata", "trades"}
 	for _, typeOfCheck := range checks {
 		for _, marketInfo := range engines {
@@ -106,4 +109,11 @@ func main() {
 			}
 		}
 	}
+}
+
+func main() {
+	configuration = config.ReadConfig("config.json")
+	s := gocron.NewScheduler()
+	s.Every(5).Seconds().Do(execute)
+	<-s.Start()
 }
