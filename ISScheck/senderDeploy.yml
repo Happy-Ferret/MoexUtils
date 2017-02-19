@@ -1,0 +1,64 @@
+---
+
+- hosts: all
+  remote_user: root
+  vars_files:
+    - DeployVars.yml
+
+
+  tasks:
+    - name: build "{{buildTarget}}" binary
+      command: go build -o {{buildTarget}}
+      delegate_to: 127.0.0.1
+      register: filebuild
+      environment:
+        GOOS: "{{OS}}"
+        GOARCH: "{{ARCH}}"
+      tags:
+        build
+
+    - name: push binary file
+      copy:
+        src: "{{buildTarget}}"
+        dest: "{{ remotePath }}{{buildTarget}}"
+        owner: "{{ user }}"
+        force: yes
+        mode: 755
+      tags:
+        push
+
+    - name: push config file
+      template:
+        src: "config.json.example"
+        dest: "{{ remotePath }}{{workTarget}}.json"
+        owner: "{{ user }}"
+        mode: 0644
+      tags:
+        push
+
+    - name: remove local build
+      file:
+        path: "{{buildTarget}}"
+        state: absent
+      delegate_to: 127.0.0.1
+      tags:
+        build
+
+  post_tasks:
+    - name: "{{workTarget}} deploy notify"
+      slack:
+        token: "{{token}}"
+        attachments:
+        - text: "{{buildTarget}} deploy done!"
+          color: "#00ff5d"
+          title: "script {{workTarget}} updated"
+          channel: "#deploy"
+          fields:
+            - title: "Information"
+              value: "{{buildTarget}} build time {{filebuild.delta}} seconds\n
+              {{ansible_hostname}} {{remotePath}}"
+              short: "false"
+        validate_certs: yes
+      delegate_to: "{{serverWichCanHook}}"
+      tags:
+        notify
