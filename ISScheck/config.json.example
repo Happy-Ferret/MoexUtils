@@ -1,0 +1,11 @@
+{
+	"Server": {
+		"Ip": "{{graphiteServer}}",
+		"Port": "{{graphitePort}}"
+},
+"Zabbix": {
+		"Ip": "{{zabbixServer}}",
+		"Port": "{{zabbixPort}}"
+	},
+	"Servername": "{{servername}}"
+}
