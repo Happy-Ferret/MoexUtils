@@ -44,28 +44,19 @@ func randNum() string {
 func urlReturn(engine, market, typeOfCheck string) string {
 	// engine - stock, futures, currency, stock
 	// market - index, forts, selt, shares
+	var parturl string
 	if typeOfCheck == "marketdata" {
+		parturl = "/securities.json?iss.only=marketdata&sort_column=UPDATETIME&sort_order=desc&first=1&marketdata.columns=UPDATETIME"
 		if market == "index" {
-			//
-			// Add "&securities=MICEXINDEXCF,RTSI,MICEXBMI,RTSSTD,RVI" if makret == index
-			//
-			parturl := "/securities.json?iss.only=marketdata&sort_column=UPDATETIME&sort_order=desc&first=1&marketdata.columns=UPDATETIME&securities=MICEXINDEXCF,RTSI,MICEXBMI,RTSSTD,RVI"
-			url := "http://iss.moex.com/iss/engines/" + engine + "/markets/" + market + parturl
-			return url
+			parturl += "&securities=MICEXINDEXCF,RTSI,MICEXBMI,RTSSTD,RVI"
 		}
-		parturl := "/securities.json?iss.only=marketdata&sort_column=UPDATETIME&sort_order=desc&first=1&marketdata.columns=UPDATETIME"
-		url := "http://iss.moex.com/iss/engines/" + engine + "/markets/" + market + parturl
-		return url
-
 	} else if typeOfCheck == "trades" {
-		parturl := "/trades.json?reversed=1&limit=1&iss.only=trades&trades.columns=TRADETIME"
-		url := "http://iss.moex.com/iss/engines/" + engine + "/markets/" + market + parturl
-		return url
-
+		parturl = "/trades.json?reversed=1&limit=1&iss.only=trades&trades.columns=TRADETIME"
 	} else {
 		log.Fatal("unknown type of check")
 		return "unknown type of check"
 	}
+	return "http://iss.moex.com/iss/engines/" + engine + "/markets/" + market + parturl
 }
 
 // TODO split on 2 functions
