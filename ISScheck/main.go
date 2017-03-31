@@ -47,7 +47,13 @@ func urlReturn(engine, market, typeOfCheck string) string {
 	// market - index, forts, selt, shares
 	var parturl string
 	if typeOfCheck == "marketdata" {
-		parturl = "/securities.json?iss.only=marketdata&sort_column=UPDATETIME&sort_order=desc&first=1&marketdata.columns=UPDATETIME"
+		parturl = "/securities.json?iss.only=marketdata&sort_order=desc&first=1"
+		if market == "shares" {
+			// FIXME временный work around пока не исправим запрос в ИСС
+			parturl += "&marketdata.columns=TIME&sort_column=TIME"
+		} else {
+			parturl += "&marketdata.columns=UPDATETIME&sort_column=UPDATETIME"
+		}
 		if market == "index" {
 			parturl += "&securities=MICEXINDEXCF,RTSI,MICEXBMI,RTSSTD,RVI"
 		}
