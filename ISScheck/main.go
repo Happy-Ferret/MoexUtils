@@ -37,7 +37,6 @@ type Request struct {
 	} `json:"trades"`
 }
 
-//
 func randNum() string {
 	return fmt.Sprintf("&rand=%v", rand.Intn(1000))
 }
@@ -55,6 +54,8 @@ func urlReturn(engine, market, typeOfCheck string) string {
 			parturl += "&marketdata.columns=UPDATETIME&sort_column=UPDATETIME"
 		}
 		if market == "index" {
+			// Мониториим только realtime индексы.
+			// Выбраны основные индексы которыи приходят из разных считалок
 			parturl += "&securities=MICEXINDEXCF,RTSI,MICEXBMI,RTSSTD,RVI"
 		}
 	} else if typeOfCheck == "trades" {
@@ -80,7 +81,6 @@ func getURL(url string) string {
 	}
 	output = input.Marketdata.Data[0][0]
 	return output
-
 }
 
 func main() {
@@ -103,8 +103,6 @@ func main() {
 			if ok == false {
 				log.Fatal(ok)
 			}
-
 		}
 	}
-
 }
