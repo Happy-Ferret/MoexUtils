@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 
 	moexlib "github.com/agareev/MoexLib/monitoring"
 	config "github.com/agareev/MoexLib/other"
@@ -36,9 +37,8 @@ type Request struct {
 	} `json:"trades"`
 }
 
-//
 func randNum() string {
-	return "4"
+	return fmt.Sprintf("&rand=%v", rand.Intn(1000))
 }
 
 func urlReturn(engine, market, typeOfCheck string) string {
@@ -46,8 +46,16 @@ func urlReturn(engine, market, typeOfCheck string) string {
 	// market - index, forts, selt, shares
 	var parturl string
 	if typeOfCheck == "marketdata" {
-		parturl = "/securities.json?iss.only=marketdata&sort_column=UPDATETIME&sort_order=desc&first=1&marketdata.columns=UPDATETIME"
+		parturl = "/securities.json?iss.only=marketdata&sort_order=desc&first=1"
+		if market == "shares" {
+			// FIXME временный work around пока не исправим запрос в ИСС
+			parturl += "&marketdata.columns=TIME&sort_column=TIME"
+		} else {
+			parturl += "&marketdata.columns=UPDATETIME&sort_column=UPDATETIME"
+		}
 		if market == "index" {
+			// Мониториим только realtime индексы.
+			// Выбраны основные индексы которыи приходят из разных считалок
 			parturl += "&securities=MICEXINDEXCF,RTSI,MICEXBMI,RTSSTD,RVI"
 		}
 	} else if typeOfCheck == "trades" {
@@ -56,7 +64,7 @@ func urlReturn(engine, market, typeOfCheck string) string {
 		log.Fatal("unknown type of check")
 		return "unknown type of check"
 	}
-	return "http://iss.moex.com/iss/engines/" + engine + "/markets/" + market + parturl
+	return "http://iss.moex.com/iss/engines/" + engine + "/markets/" + market + parturl + randNum()
 }
 
 // TODO split on 2 functions
@@ -73,31 +81,29 @@ func getURL(url string) string {
 	}
 	output = input.Marketdata.Data[0][0]
 	return output
-
 }
 
 func main() {
-	urls := map[string]string{
-		"shares": "stock",
-		"selt":   "currency",
-		"forts":  "futures",
-		"index":  "stock",
+	engines := [][2]string{
+		{"stock", "shares"},
+		{"currency", "selt"},
+		{"futures", "forts"},
+		{"stock", "index"},
 	}
 
 	configuration = config.ReadConfig("config.json")
 	checks := []string{"marketdata", "trades"}
 	for _, typeOfCheck := range checks {
-		for market, engine := range urls {
+		for _, market_info := range engines {
+			engine, market := market_info[0], market_info[1]
 			url := urlReturn(engine, market, typeOfCheck)
 			diff := moexlib.GetDelta(getURL(url))
 			delta := fmt.Sprintf("%v", diff)
-			// fmt.Println(engine+"--"+market, delta)
+			// fmt.Println(engine+"--"+market, delta, url)
 			ok := moexlib.Send2Graphite(delta, "iss."+typeOfCheck+"."+engine+"."+market, configuration.Server.IP, configuration.Server.Port)
 			if ok == false {
 				log.Fatal(ok)
 			}
-
 		}
 	}
-
 }
