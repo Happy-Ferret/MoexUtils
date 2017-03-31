@@ -84,21 +84,22 @@ func getURL(url string) string {
 }
 
 func main() {
-	urls := map[string]string{
-		"shares": "stock",
-		"selt":   "currency",
-		"forts":  "futures",
-		"index":  "stock",
+	engines := [][2]string{
+		{"stock", "shares"},
+		{"currency", "selt"},
+		{"futures", "forts"},
+		{"stock", "index"},
 	}
 
 	configuration = config.ReadConfig("config.json")
 	checks := []string{"marketdata", "trades"}
 	for _, typeOfCheck := range checks {
-		for market, engine := range urls {
+		for _, market_info := range engines {
+			engine, market := market_info[0], market_info[1]
 			url := urlReturn(engine, market, typeOfCheck)
 			diff := moexlib.GetDelta(getURL(url))
 			delta := fmt.Sprintf("%v", diff)
-			// fmt.Println(engine+"--"+market, delta)
+			// fmt.Println(engine+"--"+market, delta, url)
 			ok := moexlib.Send2Graphite(delta, "iss."+typeOfCheck+"."+engine+"."+market, configuration.Server.IP, configuration.Server.Port)
 			if ok == false {
 				log.Fatal(ok)
