@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 
 	moexlib "github.com/agareev/MoexLib/monitoring"
 	config "github.com/agareev/MoexLib/other"
@@ -38,7 +39,7 @@ type Request struct {
 
 //
 func randNum() string {
-	return "4"
+	return fmt.Sprintf("&rand=%v", rand.Intn(1000))
 }
 
 func urlReturn(engine, market, typeOfCheck string) string {
@@ -56,7 +57,7 @@ func urlReturn(engine, market, typeOfCheck string) string {
 		log.Fatal("unknown type of check")
 		return "unknown type of check"
 	}
-	return "http://iss.moex.com/iss/engines/" + engine + "/markets/" + market + parturl
+	return "http://iss.moex.com/iss/engines/" + engine + "/markets/" + market + parturl + randNum()
 }
 
 // TODO split on 2 functions
