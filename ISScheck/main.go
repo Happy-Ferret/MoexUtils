@@ -103,12 +103,14 @@ func execute() {
 			diff := moexlib.GetDelta(getURL(url))
 			delta := fmt.Sprintf("%v", diff)
 			// fmt.Println(engine+"--"+market, delta, url)
+			log.Println("Got " + engine+"_" +market+" delta: "+ delta)
 			ok := moexlib.Send2Graphite(delta, "iss."+typeOfCheck+"."+engine+"."+market, configuration.Server.IP, configuration.Server.Port)
 			if ok == false {
 				log.Fatal(ok)
 			}
 		}
 	}
+	log.Println("Checked all data")
 }
 
 func main() {
