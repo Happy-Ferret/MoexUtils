@@ -10,6 +10,12 @@ import (
 	confluence "github.com/seppestas/go-confluence"
 )
 
+// AllowedClient JSON struct
+type AllowedClient struct {
+	Name string
+	IP   []string
+}
+
 var (
 	path     = "./file.txt"
 	pageid   = "http://url.com"
@@ -37,6 +43,17 @@ func parseFile(bodys []string) string {
 	return body
 }
 
+func (c *AllowedClient) getName() string {
+	return c.Name
+}
+
+func makeAllowedClient(body []string) AllowedClient {
+	name := body[0]
+	IPs := body[0:]
+	c := AllowedClient{name, IPs}
+	return c
+}
+
 // data := url.Values{}
 // 	data.Set("expand", strings.Join(expand, ","))
 // 	contentEndPoint.RawQuery = data.Encode()
@@ -57,9 +74,18 @@ func main() {
 	flag.StringVar(&login, "l", login, "login")
 	flag.StringVar(&password, "p", password, "password")
 	flag.Parse()
-
+	z := make([]string, 2)
+	c := AllowedClient{"petya", z}
+	fmt.Println(c.getName())
 	// x := splitFile(readFile(path))
 	// fmt.Println(parseFile(x))
-	push2wiki("47646880", login, password)
+	// push2wiki("num", login, password)
+	// fmt.Println(splitFile(readFile(path)))
+	// clients := []AllowedClient
+	for _, x := range splitFile(readFile(path)) {
+		c := makeAllowedClient(x)
+		fmt.Println(c.getName())
+
+	}
 
 }
