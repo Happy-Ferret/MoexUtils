@@ -14,12 +14,16 @@ type AllowedClient struct {
 }
 
 var (
-	path     = "./file.txt"
-	pageid   = "---"
-	login    = "---"
-	password = "---"
-	conflout bytes.Buffer
-	url      = "---"
+	path           = "./file.txt"
+	templatePath   = "template.tmpl"
+	tempfile       = "state.tmp"
+	pageid         = "1111111"
+	login          = "login"
+	password       = "pasword"
+	conflout       bytes.Buffer
+	url            = "wikiurl"
+	wikiSpaceName  = "WEBDEVOPS"
+	wikiPageTittle = "Tittle Description"
 )
 
 func (c *AllowedClient) getName() string {
@@ -44,13 +48,12 @@ func main() {
 	flag.StringVar(&password, "p", password, "password")
 	flag.Parse()
 
-	t, _ := template.ParseFiles("template.tmpl")
+	t, _ := template.ParseFiles(templatePath)
 	data := make([]AllowedClient, 1)
 
 	for _, x := range splitFile(readFile(path)) {
 		data = append(data, makeAllowedClient(x))
 	}
-	// fmt.Println(data)
 	t.Execute(&conflout, data)
 
 	Joutput := prepare2Wiki(&conflout)

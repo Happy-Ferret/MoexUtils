@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -20,8 +19,8 @@ type pageSpace struct {
 }
 
 type pageBodyStorage struct {
-	Value          *bytes.Buffer `json:"value"`
-	Representation string        `json:"representation"`
+	Value          string `json:"value"`
+	Representation string `json:"representation"`
 }
 
 type pageBody struct {
@@ -39,6 +38,14 @@ type pageUpdate struct {
 	Space   pageSpace      `json:"space"`
 	Body    pageBody       `json:"body"`
 	Version pageVersionPUT `json:"version"`
+}
+
+func (t *pageUpdate) JSON() ([]byte, error) {
+	buffer := &bytes.Buffer{}
+	encoder := json.NewEncoder(buffer)
+	encoder.SetEscapeHTML(false)
+	err := encoder.Encode(t)
+	return buffer.Bytes(), err
 }
 
 func upPageVersion(pageid string) int {
@@ -60,26 +67,23 @@ func upPageVersion(pageid string) int {
 }
 
 func prepare2Wiki(body *bytes.Buffer) []byte {
-
 	version := upPageVersion(pageid)
-	vpageSpace := pageSpace{Key: "WEBDEVOPS"}
-	vpageBodyStorage := pageBodyStorage{Value: body, Representation: "storage"}
+	vpageSpace := pageSpace{Key: wikiSpaceName}
+	vpageBodyStorage := pageBodyStorage{Value: body.String(), Representation: "storage"}
 	vpageBody := pageBody{vpageBodyStorage}
 	vpageVersionPUT := pageVersionPUT{Number: version}
 	data := pageUpdate{
 		ID:      pageid,
 		Type:    "page",
-		Tittle:  "PAGE",
+		Tittle:  wikiPageTittle,
 		Space:   vpageSpace,
 		Body:    vpageBody,
 		Version: vpageVersionPUT,
 	}
-	fmt.Println(data.ID, data.Version)
-	output, err := json.Marshal(data)
+	output, err := data.JSON()
 	if err != nil {
 		log.Println("Problem with parse! ", err)
 	}
-	fmt.Println(string(output))
 	return output
 }
 
@@ -88,7 +92,6 @@ func push2Wiki(body []byte) error {
 	req, _ := http.NewRequest("PUT", url+pageid, bytes.NewBuffer(body))
 
 	req.SetBasicAuth(login, password)
-	fmt.Println(login, password, url+pageid)
 	req.Header.Set("Content-Type", "application/json")
 	// req.Body.Read(body)
 	resp, err := client.Do(req)
@@ -96,9 +99,9 @@ func push2Wiki(body []byte) error {
 		log.Fatal(err)
 	}
 	defer resp.Body.Close()
-	output, _ := ioutil.ReadAll(resp.Body)
-	fmt.Println("request Body:", string(body))
-	fmt.Println("\n\nresponse Body:", string(output))
-
+	_, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
 	return nil
 }

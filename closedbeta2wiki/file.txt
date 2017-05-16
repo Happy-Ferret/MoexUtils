@@ -1,0 +1,10 @@
+# Internal network, VPN
+allow 1.1.1.1;
+allow 2.2.2.0/24;
+
+# Next team
+allow 3.3.3.3;
+allow 5.5.5.5;
+
+# DENY
+deny all;
