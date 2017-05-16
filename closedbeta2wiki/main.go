@@ -5,7 +5,6 @@ import (
 	"flag"
 	"html/template"
 	"strings"
-	// confluence "github.com/seppestas/go-confluence"
 )
 
 // AllowedClient JSON struct
@@ -16,11 +15,11 @@ type AllowedClient struct {
 
 var (
 	path     = "./file.txt"
-	pageid   = "----"
-	login    = "----"
-	password = "----"
+	pageid   = "---"
+	login    = "---"
+	password = "---"
 	conflout bytes.Buffer
-	url      = "----"
+	url      = "---"
 )
 
 func (c *AllowedClient) getName() string {
@@ -44,6 +43,7 @@ func main() {
 	flag.StringVar(&login, "l", login, "login")
 	flag.StringVar(&password, "p", password, "password")
 	flag.Parse()
+
 	t, _ := template.ParseFiles("template.tmpl")
 	data := make([]AllowedClient, 1)
 
@@ -52,5 +52,7 @@ func main() {
 	}
 	// fmt.Println(data)
 	t.Execute(&conflout, data)
-	_ = push2Wiki(conflout.String())
+
+	Joutput := prepare2Wiki(&conflout)
+	_ = push2Wiki(Joutput)
 }
