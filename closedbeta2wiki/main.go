@@ -22,7 +22,7 @@ var (
 	password       = "pasword"
 	conflout       bytes.Buffer
 	url            = "wikiurl"
-	wikiSpaceName  = "WEBDEVOPS"
+	wikiSpaceName  = "Space"
 	wikiPageTittle = "Tittle Description"
 )
 
