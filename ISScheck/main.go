@@ -45,10 +45,7 @@ var (
 	issURL          = "http://iss.moex.com/iss"
 	isMOCK          bool
 	gatewayURL      = "http://gturl:9091"
-	throughputGuage = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "iss",
-		Help: "help iss",
-	})
+
 )
 
 func init() {
@@ -117,25 +114,37 @@ func execute() {
 		{"stock", "index"},
 	}
 
+	registry := prometheus.NewRegistry()
+
+	metrics := make(map[string]prometheus.Gauge)
 	checks := []string{"marketdata", "trades"}
 	for _, typeOfCheck := range checks {
 		for _, marketInfo := range engines {
+
 			engine, market := marketInfo[0], marketInfo[1]
 			url := urlReturn(engine, market, typeOfCheck)
+			log.Println(url)
 			diff := getDelta(getURL(url))
-			delta := fmt.Sprintf("%v", diff)
-			// fmt.Println(engine+"--"+market, delta, url)
-			log.Println("Got " + engine + "_" + market + " delta: " + delta)
-			throughputGuage = prometheus.NewGauge(prometheus.GaugeOpts{
-				Name: "iss_" + typeOfCheck + "_" + engine + "_" + market,
-				Help: "iss." + typeOfCheck + "." + engine + "." + market + " in seconds",
+			metricName := "iss_" + typeOfCheck + "_" + engine + "_" + market
+			metrics[metricName] = prometheus.NewGauge(prometheus.GaugeOpts{
+				Name: metricName,
+				Help: metricName + " in seconds",
 			})
-			throughputGuage.Set(diff)
-			if err := push.Collectors("throughput_job", push.HostnameGroupingKey(), gatewayURL, throughputGuage); err != nil {
-				fmt.Println("Could not push completion time to Pushgateway:", err)
-			}
+			metrics[metricName].Set(diff)
 		}
 	}
+
+	for key, _ := range metrics {
+		registry.MustRegister(metrics[key])
+	}
+	if err := push.AddFromGatherer(
+        "iss_checker", nil,
+        gatewayURL,
+        registry,
+    ); err != nil {
+        fmt.Println("Could not push to Pushgateway:", err)
+    }
+
 	log.Println("Checked all data")
 }
 
