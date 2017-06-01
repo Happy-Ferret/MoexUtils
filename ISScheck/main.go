@@ -6,13 +6,13 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"net/http"
 	"time"
 
 	moexlib "github.com/agareev/MoexLib/monitoring"
 	config "github.com/agareev/MoexLib/other"
 	"github.com/jasonlvhit/gocron"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/push"
 )
 
 /*
@@ -44,8 +44,9 @@ var (
 	configuration config.Config
 	issURL               = "http://iss.moex.com/iss"
 	isMOCK        bool   = false
-	gatewayURL           = "http://gturl:9091"
+	debug         bool   = false
 	checktime     uint64 = 15
+	metrics              = make(map[string]prometheus.Gauge)
 )
 
 func init() {
@@ -95,12 +96,16 @@ func getURL(url string) string {
 	var input Request
 	var output string
 
-	// log.Println(url)
 	json.Unmarshal(moexlib.GetAllContents(url), &input)
 	if input.Marketdata.Columns == nil {
 		json.Unmarshal(moexlib.GetAllContents(url), &input)
-		output = input.Trade.Data[0][0]
-		return output
+		// FIXME workarround for empty array
+		if len(input.Trade.Data) != 0 {
+			output = input.Trade.Data[0][0]
+			return output
+		} else {
+			return ""
+		}
 	}
 	output = input.Marketdata.Data[0][0]
 	return output
@@ -114,43 +119,56 @@ func execute() {
 		{"stock", "index"},
 	}
 
-	registry := prometheus.NewRegistry()
-
-	metrics := make(map[string]prometheus.Gauge)
 	checks := []string{"marketdata", "trades"}
 	for _, typeOfCheck := range checks {
 		for _, marketInfo := range engines {
 
 			engine, market := marketInfo[0], marketInfo[1]
 			url := urlReturn(engine, market, typeOfCheck) + randNum()
+			if debug == true {
+				log.Println(url)
+			}
 			diff := getDelta(getURL(url))
-			log.Println("Got "+engine+"_"+market+" delta: ", diff)
+			log.Println("Got "+typeOfCheck+"_"+engine+"_"+market+" delta: ", diff)
+			metricName := "iss_" + typeOfCheck + "_" + engine + "_" + market
+			metrics[metricName].Set(diff)
+		}
+	}
+
+	log.Println("Checked all data")
+}
+
+func cron() {
+	engines := [][2]string{
+		{"stock", "shares"},
+		{"currency", "selt"},
+		{"futures", "forts"},
+		{"stock", "index"},
+	}
+
+	checks := []string{"marketdata", "trades"}
+	for _, typeOfCheck := range checks {
+		for _, marketInfo := range engines {
+			engine, market := marketInfo[0], marketInfo[1]
 			metricName := "iss_" + typeOfCheck + "_" + engine + "_" + market
 			metrics[metricName] = prometheus.NewGauge(prometheus.GaugeOpts{
 				Name:        metricName,
 				Help:        metricName + " in seconds",
 				ConstLabels: prometheus.Labels{"stream": metricName},
 			})
-			metrics[metricName].Set(diff)
+			prometheus.MustRegister(metrics[metricName])
+			log.Println(metricName + " registered")
 		}
 	}
 
-	for key := range metrics {
-		registry.MustRegister(metrics[key])
-	}
-	if err := push.AddFromGatherer(
-		"iss_checker", nil,
-		gatewayURL,
-		registry,
-	); err != nil {
-		fmt.Println("Could not push to Pushgateway:", err)
-	}
-
-	log.Println("Checked all data")
-}
-
-func main() {
 	s := gocron.NewScheduler()
 	s.Every(checktime).Seconds().Do(execute)
 	<-s.Start()
+}
+
+func main() {
+	go cron()
+
+	http.Handle("/metrics", prometheus.Handler())
+	http.ListenAndServe(":8080", nil)
 }
