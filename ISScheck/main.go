@@ -87,7 +87,7 @@ func urlReturn(engine, market, typeOfCheck string) string {
 		log.Fatal("unknown type of check")
 		return "unknown type of check"
 	}
-	return issURL + "/engines/" + engine + "/markets/" + market + parturl + randNum()
+	return issURL + "/engines/" + engine + "/markets/" + market + parturl
 }
 
 // TODO split on 2 functions
@@ -122,7 +122,7 @@ func execute() {
 		for _, marketInfo := range engines {
 
 			engine, market := marketInfo[0], marketInfo[1]
-			url := urlReturn(engine, market, typeOfCheck)
+			url := urlReturn(engine, market, typeOfCheck) + randNum()
 			diff := getDelta(getURL(url))
 			log.Println("Got "+engine+"_"+market+" delta: ", diff)
 			metricName := "iss_" + typeOfCheck + "_" + engine + "_" + market
