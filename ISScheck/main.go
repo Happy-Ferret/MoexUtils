@@ -4,11 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"math/rand"
+	"time"
 
 	moexlib "github.com/agareev/MoexLib/monitoring"
 	config "github.com/agareev/MoexLib/other"
 	"github.com/jasonlvhit/gocron"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/push"
 )
 
 /*
@@ -24,11 +28,6 @@ import (
 }}
 */
 
-var (
-	configuration config.Config
-	issURL        = "http://iss.moex.com/iss"
-)
-
 // Request JSON description
 type Request struct {
 	Marketdata struct {
@@ -39,6 +38,26 @@ type Request struct {
 		Columns []string   `json:"columns"`
 		Data    [][]string `json:"data"`
 	} `json:"trades"`
+}
+
+var (
+	configuration config.Config
+	issURL               = "http://iss.moex.com/iss"
+	isMOCK        bool   = false
+	gatewayURL           = "http://gturl:9091"
+	checktime     uint64 = 15
+)
+
+func init() {
+	configuration = config.ReadConfig("config.json")
+	// add flag parse, add mock function
+}
+
+// GetDelta return string delta time
+func getDelta(lastDealTime string) float64 {
+	LastDeal := moexlib.StringTime2UnixTime(lastDealTime)
+	delta := math.Abs(time.Now().Sub(LastDeal).Seconds())
+	return delta
 }
 
 func randNum() string {
@@ -95,27 +114,43 @@ func execute() {
 		{"stock", "index"},
 	}
 
+	registry := prometheus.NewRegistry()
+
+	metrics := make(map[string]prometheus.Gauge)
 	checks := []string{"marketdata", "trades"}
 	for _, typeOfCheck := range checks {
 		for _, marketInfo := range engines {
+
 			engine, market := marketInfo[0], marketInfo[1]
 			url := urlReturn(engine, market, typeOfCheck)
-			diff := moexlib.GetDelta(getURL(url))
-			delta := fmt.Sprintf("%v", diff)
-			// fmt.Println(engine+"--"+market, delta, url)
-			log.Println("Got " + engine+"_" +market+" delta: "+ delta)
-			ok := moexlib.Send2Graphite(delta, "iss."+typeOfCheck+"."+engine+"."+market, configuration.Server.IP, configuration.Server.Port)
-			if ok == false {
-				log.Fatal(ok)
-			}
+			diff := getDelta(getURL(url))
+			log.Println("Got "+engine+"_"+market+" delta: ", diff)
+			metricName := "iss_" + typeOfCheck + "_" + engine + "_" + market
+			metrics[metricName] = prometheus.NewGauge(prometheus.GaugeOpts{
+				Name:        metricName,
+				Help:        metricName + " in seconds",
+				ConstLabels: prometheus.Labels{"stream": metricName},
+			})
+			metrics[metricName].Set(diff)
 		}
 	}
+
+	for key := range metrics {
+		registry.MustRegister(metrics[key])
+	}
+	if err := push.AddFromGatherer(
+		"iss_checker", nil,
+		gatewayURL,
+		registry,
+	); err != nil {
+		fmt.Println("Could not push to Pushgateway:", err)
+	}
+
 	log.Println("Checked all data")
 }
 
 func main() {
-	configuration = config.ReadConfig("config.json")
 	s := gocron.NewScheduler()
-	s.Every(5).Seconds().Do(execute)
+	s.Every(checktime).Seconds().Do(execute)
 	<-s.Start()
 }
