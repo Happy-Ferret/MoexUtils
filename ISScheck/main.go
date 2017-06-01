@@ -41,11 +41,11 @@ type Request struct {
 }
 
 var (
-	configuration   config.Config
-	issURL          = "http://iss.moex.com/iss"
-	isMOCK          bool
-	gatewayURL      = "http://gturl:9091"
-
+	configuration config.Config
+	issURL               = "http://iss.moex.com/iss"
+	isMOCK        bool   = false
+	gatewayURL           = "http://gturl:9091"
+	checktime     uint64 = 15
 )
 
 func init() {
@@ -123,33 +123,34 @@ func execute() {
 
 			engine, market := marketInfo[0], marketInfo[1]
 			url := urlReturn(engine, market, typeOfCheck)
-			log.Println(url)
 			diff := getDelta(getURL(url))
+			log.Println("Got "+engine+"_"+market+" delta: ", diff)
 			metricName := "iss_" + typeOfCheck + "_" + engine + "_" + market
 			metrics[metricName] = prometheus.NewGauge(prometheus.GaugeOpts{
-				Name: metricName,
-				Help: metricName + " in seconds",
+				Name:        metricName,
+				Help:        metricName + " in seconds",
+				ConstLabels: prometheus.Labels{"stream": metricName},
 			})
 			metrics[metricName].Set(diff)
 		}
 	}
 
-	for key, _ := range metrics {
+	for key := range metrics {
 		registry.MustRegister(metrics[key])
 	}
 	if err := push.AddFromGatherer(
-        "iss_checker", nil,
-        gatewayURL,
-        registry,
-    ); err != nil {
-        fmt.Println("Could not push to Pushgateway:", err)
-    }
+		"iss_checker", nil,
+		gatewayURL,
+		registry,
+	); err != nil {
+		fmt.Println("Could not push to Pushgateway:", err)
+	}
 
 	log.Println("Checked all data")
 }
 
 func main() {
 	s := gocron.NewScheduler()
-	s.Every(5).Seconds().Do(execute)
+	s.Every(checktime).Seconds().Do(execute)
 	<-s.Start()
 }
