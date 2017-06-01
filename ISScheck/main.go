@@ -4,11 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"math/rand"
+	"time"
 
 	moexlib "github.com/agareev/MoexLib/monitoring"
 	config "github.com/agareev/MoexLib/other"
 	"github.com/jasonlvhit/gocron"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/push"
 )
 
 /*
@@ -24,11 +28,6 @@ import (
 }}
 */
 
-var (
-	configuration config.Config
-	issURL        = "http://iss.moex.com/iss"
-)
-
 // Request JSON description
 type Request struct {
 	Marketdata struct {
@@ -39,6 +38,29 @@ type Request struct {
 		Columns []string   `json:"columns"`
 		Data    [][]string `json:"data"`
 	} `json:"trades"`
+}
+
+var (
+	configuration   config.Config
+	issURL          = "http://iss.moex.com/iss"
+	isMOCK          bool
+	gatewayURL      = "http://gturl:9091"
+	throughputGuage = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "iss",
+		Help: "help iss",
+	})
+)
+
+func init() {
+	configuration = config.ReadConfig("config.json")
+	// add flag parse, add mock function
+}
+
+// GetDelta return string delta time
+func getDelta(lastDealTime string) float64 {
+	LastDeal := moexlib.StringTime2UnixTime(lastDealTime)
+	delta := math.Abs(time.Now().Sub(LastDeal).Seconds())
+	return delta
 }
 
 func randNum() string {
@@ -100,13 +122,17 @@ func execute() {
 		for _, marketInfo := range engines {
 			engine, market := marketInfo[0], marketInfo[1]
 			url := urlReturn(engine, market, typeOfCheck)
-			diff := moexlib.GetDelta(getURL(url))
+			diff := getDelta(getURL(url))
 			delta := fmt.Sprintf("%v", diff)
 			// fmt.Println(engine+"--"+market, delta, url)
-			log.Println("Got " + engine+"_" +market+" delta: "+ delta)
-			ok := moexlib.Send2Graphite(delta, "iss."+typeOfCheck+"."+engine+"."+market, configuration.Server.IP, configuration.Server.Port)
-			if ok == false {
-				log.Fatal(ok)
+			log.Println("Got " + engine + "_" + market + " delta: " + delta)
+			throughputGuage = prometheus.NewGauge(prometheus.GaugeOpts{
+				Name: "iss_" + typeOfCheck + "_" + engine + "_" + market,
+				Help: "iss." + typeOfCheck + "." + engine + "." + market + " in seconds",
+			})
+			throughputGuage.Set(diff)
+			if err := push.Collectors("throughput_job", push.HostnameGroupingKey(), gatewayURL, throughputGuage); err != nil {
+				fmt.Println("Could not push completion time to Pushgateway:", err)
 			}
 		}
 	}
@@ -114,7 +140,6 @@ func execute() {
 }
 
 func main() {
-	configuration = config.ReadConfig("config.json")
 	s := gocron.NewScheduler()
 	s.Every(5).Seconds().Do(execute)
 	<-s.Start()
