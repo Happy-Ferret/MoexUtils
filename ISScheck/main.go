@@ -46,7 +46,16 @@ var (
 	isMOCK        bool   = false
 	debug         bool   = false
 	checktime     uint64 = 15
+	ListenPort           = ":8080"
 	metrics              = make(map[string]prometheus.Gauge)
+	engines              = [][2]string{
+		{"stock", "shares"},
+		{"currency", "selt"},
+		{"futures", "forts"},
+		{"stock", "index"},
+	}
+
+	checks = []string{"marketdata", "trades"}
 )
 
 func init() {
@@ -111,15 +120,23 @@ func getURL(url string) string {
 	return output
 }
 
-func execute() {
-	engines := [][2]string{
-		{"stock", "shares"},
-		{"currency", "selt"},
-		{"futures", "forts"},
-		{"stock", "index"},
+func registerISScheck() {
+	for _, typeOfCheck := range checks {
+		for _, marketInfo := range engines {
+			engine, market := marketInfo[0], marketInfo[1]
+			metricName := "iss_" + typeOfCheck + "_" + engine + "_" + market
+			metrics[metricName] = prometheus.NewGauge(prometheus.GaugeOpts{
+				Name:        metricName,
+				Help:        metricName + " in seconds",
+				ConstLabels: prometheus.Labels{"stream": metricName},
+			})
+			prometheus.MustRegister(metrics[metricName])
+			log.Println(metricName + " registered")
+		}
 	}
+}
 
-	checks := []string{"marketdata", "trades"}
+func executeISScheck() {
 	for _, typeOfCheck := range checks {
 		for _, marketInfo := range engines {
 
@@ -139,36 +156,19 @@ func execute() {
 }
 
 func cron() {
-	engines := [][2]string{
-		{"stock", "shares"},
-		{"currency", "selt"},
-		{"futures", "forts"},
-		{"stock", "index"},
-	}
-
-	checks := []string{"marketdata", "trades"}
-	for _, typeOfCheck := range checks {
-		for _, marketInfo := range engines {
-			engine, market := marketInfo[0], marketInfo[1]
-			metricName := "iss_" + typeOfCheck + "_" + engine + "_" + market
-			metrics[metricName] = prometheus.NewGauge(prometheus.GaugeOpts{
-				Name:        metricName,
-				Help:        metricName + " in seconds",
-				ConstLabels: prometheus.Labels{"stream": metricName},
-			})
-			prometheus.MustRegister(metrics[metricName])
-			log.Println(metricName + " registered")
-		}
-	}
+	registerISScheck()
+	registerUSDEURcheck()
 
 	s := gocron.NewScheduler()
-	s.Every(checktime).Seconds().Do(execute)
+	s.Every(checktime).Seconds().Do(executeISScheck)
+	s.Every(checktime).Seconds().Do(executeUSDEURcheck)
 	<-s.Start()
+
 }
 
 func main() {
 	go cron()
 
 	http.Handle("/metrics", prometheus.Handler())
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(ListenPort, nil)
 }
