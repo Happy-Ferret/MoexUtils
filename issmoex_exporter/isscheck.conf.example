@@ -1,0 +1,15 @@
+[program:issCheck]
+command = /path/to/execute/ISScheck
+
+autostart = true
+autorestart = true              ; whether/when to restart (default: unexpected)
+startsecs = 5                   ; number of secs prog must stay running (def. 1)
+startretries = 3                ; max # of serial start failures (default 3)
+stopwaitsecs = 10
+directory=/path/to/execute/
+stdout_logfile = /var/log/isscheck/%(program_name)s_stdout.log
+stderr_logfile = /var/log/isscheck/%(program_name)s_stderr.log
+stdout_logfile_maxbytes = 50MB
+stdout_logfile_backups = 3
+stderr_logfile_maxbytes = 50MB
+stderr_logfile_backups = 3
