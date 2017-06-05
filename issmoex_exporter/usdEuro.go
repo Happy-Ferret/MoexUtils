@@ -37,22 +37,19 @@ func getCurrency(content []byte) float64 {
 	return output.Marketdata.Data[0][lastI]
 }
 
-func registerUSDEURcheck() {
-	metrics["metricUSD"] = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name:        "iss_usd",
-		Help:        "iss_usd" + " in rubles",
-		ConstLabels: prometheus.Labels{"stream": "iss_usd"},
+func registerMetric(id, name string) {
+	metrics[id] = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name:        name,
+		Help:        name + " in rubles",
+		ConstLabels: prometheus.Labels{"stream": name},
 	})
-	prometheus.MustRegister(metrics["metricUSD"])
-	log.Println("metricUSD" + " registered")
+	prometheus.MustRegister(metrics[id])
+	log.Println(id + " registered")
+}
 
-	metrics["metricEUR"] = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name:        "iss_eur",
-		Help:        "iss_eur" + " in rubles",
-		ConstLabels: prometheus.Labels{"stream": "iss_eur"},
-	})
-	prometheus.MustRegister(metrics["metricEUR"])
-	log.Println("metricEUR" + " registered")
+func registerUSDEURcheck() {
+	registerMetric("metricUSD", "iss_usd")
+	registerMetric("metricEUR", "iss_eur")
 }
 
 func executeUSDEURcheck() {
