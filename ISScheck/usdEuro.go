@@ -3,7 +3,8 @@ package main
 import (
 	"encoding/json"
 	"log"
-	"strconv"
+
+	"github.com/prometheus/client_golang/prometheus"
 
 	m "ops.MonitoringScripts/monitoringlibs"
 )
@@ -29,16 +30,30 @@ func getIndex(array []string) int {
 	return 0
 }
 
-func getCurrency(content []byte) string {
+func getCurrency(content []byte) float64 {
 	var output ResponseISS
 	var lastI int
 	json.Unmarshal(content, &output)
 	lastI = getIndex(output.Marketdata.Columns)
-	return strconv.FormatFloat(output.Marketdata.Data[0][lastI], 'f', -1, 64)
+	return output.Marketdata.Data[0][lastI]
 }
 
 func registerUSDEURcheck() {
-	log.Println("registered")
+	metrics["metricUSD"] = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name:        "iss_usd",
+		Help:        "iss_usd" + " in rubles",
+		ConstLabels: prometheus.Labels{"stream": "iss_usd"},
+	})
+	prometheus.MustRegister(metrics["metricUSD"])
+	log.Println("metricUSD" + " registered")
+
+	metrics["metricEUR"] = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name:        "iss_eur",
+		Help:        "iss_eur" + " in rubles",
+		ConstLabels: prometheus.Labels{"stream": "iss_eur"},
+	})
+	prometheus.MustRegister(metrics["metricEUR"])
+	log.Println("metricEUR" + " registered")
 }
 
 func executeUSDEURcheck() {
@@ -47,8 +62,16 @@ func executeUSDEURcheck() {
 	secs["eur"] = eur
 
 	for key, sec := range secs {
-		content := m.GetAllContents(issURL + sec)
+		if debug == true {
+			log.Println(issURL + url + sec)
+		}
+		content := m.GetAllContents(issURL + url + sec)
 		delta := getCurrency(content)
-		log.Println("executed", key, delta)
+		if key == "usd" {
+			metrics["metricUSD"].Set(delta)
+		} else {
+			metrics["metricEUR"].Set(delta)
+		}
+		log.Println("Got", key, "delta:", delta)
 	}
 }
