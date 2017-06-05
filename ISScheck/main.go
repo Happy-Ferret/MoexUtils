@@ -10,7 +10,6 @@ import (
 	"time"
 
 	moexlib "github.com/agareev/MoexLib/monitoring"
-	config "github.com/agareev/MoexLib/other"
 	"github.com/jasonlvhit/gocron"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -41,14 +40,13 @@ type Request struct {
 }
 
 var (
-	configuration config.Config
-	issURL               = "http://iss.moex.com/iss"
-	isMOCK        bool   = false
-	debug         bool   = false
-	checktime     uint64 = 15
-	ListenPort           = ":8080"
-	metrics              = make(map[string]prometheus.Gauge)
-	engines              = [][2]string{
+	issURL            = "http://iss.moex.com/iss"
+	isMOCK     bool   = false
+	debug      bool   = false
+	checktime  uint64 = 15
+	ListenPort        = ":9260"
+	metrics           = make(map[string]prometheus.Gauge)
+	engines           = [][2]string{
 		{"stock", "shares"},
 		{"currency", "selt"},
 		{"futures", "forts"},
@@ -59,7 +57,6 @@ var (
 )
 
 func init() {
-	configuration = config.ReadConfig("config.json")
 	// add flag parse, add mock function
 }
 
