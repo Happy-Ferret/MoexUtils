@@ -4,9 +4,8 @@ import (
 	"encoding/json"
 	"log"
 
+	moexlib "github.com/agareev/MoexLib/monitoring"
 	"github.com/prometheus/client_golang/prometheus"
-
-	m "ops.MonitoringScripts/monitoringlibs"
 )
 
 const url = "/engines/currency/markets/selt/boards/CETS/securities/"
@@ -65,7 +64,7 @@ func executeUSDEURcheck() {
 		if debug == true {
 			log.Println(issURL + url + sec)
 		}
-		content := m.GetAllContents(issURL + url + sec)
+		content := moexlib.GetAllContents(issURL + url + sec)
 		delta := getCurrency(content)
 		if key == "usd" {
 			metrics["metricUSD"].Set(delta)

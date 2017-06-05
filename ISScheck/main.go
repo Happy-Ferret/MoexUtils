@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"math"
@@ -57,6 +58,10 @@ var (
 )
 
 func init() {
+	flag.StringVar(&ListenPort, "L", ListenPort, "Lister port, defaul :9260")
+	flag.Uint64Var(&checktime, "S", checktime, "Check interval")
+	flag.BoolVar(&debug, "v", debug, "enable debug")
+	flag.Parse()
 	// add flag parse, add mock function
 }
 
