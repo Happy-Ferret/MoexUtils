@@ -41,8 +41,9 @@ func setTradeTime() float64 {
 
 func main() {
 	tradeTime := prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "times",
-		Help: "times description",
+		Name:        "work_time",
+		Help:        "This is time when Moex is works",
+		ConstLabels: prometheus.Labels{"environment": "prod"},
 	})
 	prometheus.MustRegister(tradeTime)
 	tradeTime.Set(setTradeTime())
