@@ -20,12 +20,16 @@ func init() {
 
 func setTradeTime() float64 {
 	t := time.Now()
+	tradeStart := time.Date(t.Year(), t.Month(), t.Day(), 10, 0, 0, 0, t.Location())
+	tradesStop := time.Date(t.Year(), t.Month(), t.Day(), 18, 45, 0, 0, t.Location())
 	cliringStart := time.Date(t.Year(), t.Month(), t.Day(), 14, 0, 0, 0, t.Location())
 	cliringStop := time.Date(t.Year(), t.Month(), t.Day(), 14, 5, 0, 0, t.Location())
-	tradesStop := time.Date(t.Year(), t.Month(), t.Day(), 18, 45, 0, 0, t.Location())
+
 	if t.After(cliringStart) && t.Before(cliringStop) {
 		return 0
 	} else if t.After(tradesStop) {
+		return 0
+	} else if t.Before(tradeStart) {
 		return 0
 	}
 	return 1
@@ -37,7 +41,7 @@ func main() {
 		Help: "times description",
 	})
 	prometheus.MustRegister(tradeTime)
-
+	tradeTime.Set(setTradeTime())
 	go func() {
 		for {
 			tradeTime.Set(setTradeTime())
