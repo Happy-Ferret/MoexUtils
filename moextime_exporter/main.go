@@ -20,6 +20,10 @@ func init() {
 
 func setTradeTime() float64 {
 	t := time.Now()
+	if t.Weekday() == 6 || t.Weekday() == 7 {
+		return 0
+	}
+
 	tradeStart := time.Date(t.Year(), t.Month(), t.Day(), 10, 0, 0, 0, t.Location())
 	tradesStop := time.Date(t.Year(), t.Month(), t.Day(), 18, 45, 0, 0, t.Location())
 	cliringStart := time.Date(t.Year(), t.Month(), t.Day(), 14, 0, 0, 0, t.Location())
