@@ -32,6 +32,8 @@ func main() {
 	if err := c.Mail(from); err != nil {
 		log.Fatal(err)
 	}
+
+	// TODO добавить возможность отсылки нескольким клиентам
 	if err := c.Rcpt(to); err != nil {
 		log.Fatal(err)
 	}
@@ -41,6 +43,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// TODO добавить возможность отсылки разного текста
 	_, err = fmt.Fprintf(wc, "This is the email body")
 	if err != nil {
 		log.Fatal(err)
