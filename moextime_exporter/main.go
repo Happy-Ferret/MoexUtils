@@ -20,7 +20,7 @@ func init() {
 
 func setTradeTime() float64 {
 	t := time.Now()
-	if t.Weekday() == 6 || t.Weekday() == 7 {
+	if t.Weekday() == 6 || t.Weekday() == 0 {
 		return 0
 	}
 
