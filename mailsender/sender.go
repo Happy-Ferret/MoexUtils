@@ -11,12 +11,14 @@ var (
 	emailserver = "mail-server:25"
 	from        = "from-notifier@server.com"
 	to          = "to-recipient@server.com"
+	mes         = "message"
 )
 
 func init() {
 	flag.StringVar(&emailserver, "s", emailserver, "email server")
 	flag.StringVar(&from, "f", from, "from rcpt")
 	flag.StringVar(&to, "t", to, "to reciever")
+	flag.StringVar(&mes, "m", mes, "message")
 	flag.Parse()
 }
 
@@ -44,8 +46,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// TODO добавить возможность отсылки разного текста
-	_, err = fmt.Fprintf(wc, "This is the email body")
+	_, err = fmt.Fprintf(wc, mes)
 	if err != nil {
 		log.Fatal(err)
 	}
